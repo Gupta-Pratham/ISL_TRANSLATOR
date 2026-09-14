@@ -1,0 +1,17 @@
+video_id,video_path,label,class_id,num_frames,num_landmarks,num_coordinates
+MVI_5185,data\processed\landmarks_preprocessed\MVI_5185.npy,3. happy,2,78,50,3
+MVI_9719,data\processed\landmarks_preprocessed\MVI_9719.npy,4. sad,3,66,50,3
+MVI_9370,data\processed\landmarks_preprocessed\MVI_9370.npy,1. loud,0,46,50,3
+MVI_9376,data\processed\landmarks_preprocessed\MVI_9376.npy,3. happy,2,36,50,3
+MVI_5339,data\processed\landmarks_preprocessed\MVI_5339.npy,2. quiet,1,52,50,3
+MVI_9573,data\processed\landmarks_preprocessed\MVI_9573.npy,5. Beautiful,4,68,50,3
+MVI_9535,data\processed\landmarks_preprocessed\MVI_9535.npy,1. loud,0,65,50,3
+MVI_9579,data\processed\landmarks_preprocessed\MVI_9579.npy,6. Ugly,5,59,50,3
+MVI_5182,data\processed\landmarks_preprocessed\MVI_5182.npy,2. quiet,1,76,50,3
+MVI_9448,data\processed\landmarks_preprocessed\MVI_9448.npy,1. loud,0,56,50,3
+MVI_9854,data\processed\landmarks_preprocessed\MVI_9854.npy,8. Blind,7,56,50,3
+MVI_9374,data\processed\landmarks_preprocessed\MVI_9374.npy,3. happy,2,45,50,3
+MVI_5340,data\processed\landmarks_preprocessed\MVI_5340.npy,2. quiet,1,53,50,3
+MVI_9846,data\processed\landmarks_preprocessed\MVI_9846.npy,6. Ugly,5,59,50,3
+MVI_9565,data\processed\landmarks_preprocessed\MVI_9565.npy,4. sad,3,63,50,3
+MVI_9850,data\processed\landmarks_preprocessed\MVI_9850.npy,7. Deaf,6,57,50,3
