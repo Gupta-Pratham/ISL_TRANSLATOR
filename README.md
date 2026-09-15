@@ -525,7 +525,7 @@ An NVIDIA GPU is optional for inference.
 ### 1. Clone the repository
 
 ```powershell
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone <https://github.com/Gupta-Pratham/ISL_TRANSLATOR>
 cd ISL_Translator
 ```
 
