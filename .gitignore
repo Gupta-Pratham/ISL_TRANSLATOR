@@ -56,7 +56,15 @@ data/processed/landmarks_test/
 
 # Individual checkpoint files are checked separately
 # before deciding how they should be distributed.
-*.pt
+# Final TCN checkpoint is included in the repository.
+models/checkpoints/gru_baseline_best.pt
+models/checkpoints/gru_hands_only_best.pt
+models/checkpoints/gru_pose_only_best.pt
+models/checkpoints/lstm_baseline_best.pt
+models/checkpoints/tcn_masked_best.pt
+models/checkpoints/tcn_position_velocity_best.pt
+models/checkpoints/tcn_temporal_aug_best.pt
+models/checkpoints/transformer_best.pt
 *.pth
 *.onnx
 
