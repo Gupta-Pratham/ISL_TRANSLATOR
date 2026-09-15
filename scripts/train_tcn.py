@@ -151,12 +151,14 @@ train_dataset, train_loader = create_dataloader(
     TRAIN_CSV,
     batch_size=BATCH_SIZE,
     shuffle=True,
+    landmark_dir=PROJECT_ROOT / "data" / "processed" / "landmarks_preprocessed",
 )
 
 val_dataset, val_loader = create_dataloader(
     VAL_CSV,
     batch_size=BATCH_SIZE,
     shuffle=False,
+    landmark_dir=PROJECT_ROOT / "data" / "processed" / "landmarks_preprocessed",
 )
 
 
@@ -190,7 +192,7 @@ train_labels = np.array(
     train_labels
 )
 
-num_classes = 8
+num_classes = 59
 
 class_counts = np.bincount(
     train_labels,
@@ -235,7 +237,7 @@ print(
 model = TCNClassifier(
     input_size=150,
     hidden_size=128,
-    num_classes=8,
+    num_classes=59,
     dropout=0.3
 )
 

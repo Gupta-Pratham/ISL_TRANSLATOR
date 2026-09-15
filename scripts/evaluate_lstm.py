@@ -2,13 +2,16 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import torch
+
 from sklearn.metrics import (
     accuracy_score,
     precision_recall_fscore_support,
     classification_report,
     confusion_matrix,
 )
+
 
 # ============================================================
 # PROJECT PATH
@@ -30,7 +33,7 @@ from src.models import LSTMClassifier
 
 
 # ============================================================
-# CONFIGURATION
+# PATHS
 # ============================================================
 
 TEST_CSV = (
@@ -40,12 +43,35 @@ TEST_CSV = (
     / "test.csv"
 )
 
+LANDMARK_DIR = (
+    PROJECT_ROOT
+    / "data"
+    / "processed"
+    / "landmarks_preprocessed"
+)
+
 MODEL_PATH = (
     PROJECT_ROOT
     / "models"
     / "checkpoints"
     / "lstm_baseline_best.pt"
 )
+
+RESULTS_DIR = (
+    PROJECT_ROOT
+    / "results"
+)
+
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+INPUT_SIZE = 150
+HIDDEN_SIZE = 128
+NUM_LAYERS = 2
+NUM_CLASSES = 59
+DROPOUT = 0.3
 
 BATCH_SIZE = 8
 
@@ -65,22 +91,47 @@ DEVICE = torch.device(
 # CLASS NAMES
 # ============================================================
 
-CLASS_NAMES = [
-    "loud",
-    "quiet",
-    "happy",
-    "sad",
-    "Beautiful",
-    "Ugly",
-    "Deaf",
-    "Blind",
-]
+class_names_df = (
+    pd.read_csv(TEST_CSV)
+    [
+        ["class_id", "label"]
+    ]
+    .drop_duplicates(
+        subset="class_id"
+    )
+    .sort_values(
+        "class_id"
+    )
+)
+
+CLASS_NAMES = (
+    class_names_df["label"]
+    .tolist()
+)
+
+
+# ============================================================
+# SAFETY CHECKS
+# ============================================================
+
+if len(CLASS_NAMES) != NUM_CLASSES:
+
+    raise ValueError(
+        f"Expected {NUM_CLASSES} classes, "
+        f"but found {len(CLASS_NAMES)} class names."
+    )
+
+
+ALL_CLASS_IDS = list(
+    range(NUM_CLASSES)
+)
 
 
 # ============================================================
 # HEADER
 # ============================================================
 
+print()
 print("============================================")
 print("ISL LSTM Evaluation")
 print("============================================")
@@ -100,10 +151,59 @@ print(
 )
 
 print(
+    f"Landmark directory: {LANDMARK_DIR}"
+)
+
+print(
     f"Model: {MODEL_PATH}"
 )
 
+print(
+    f"Input features: {INPUT_SIZE}"
+)
+
+print(
+    f"Hidden size: {HIDDEN_SIZE}"
+)
+
+print(
+    f"LSTM layers: {NUM_LAYERS}"
+)
+
+print(
+    f"Classes: {NUM_CLASSES}"
+)
+
+print(
+    f"Batch size: {BATCH_SIZE}"
+)
+
 print("============================================")
+
+
+# ============================================================
+# CHECK REQUIRED PATHS
+# ============================================================
+
+if not TEST_CSV.exists():
+
+    raise FileNotFoundError(
+        f"Test CSV not found:\n{TEST_CSV}"
+    )
+
+if not LANDMARK_DIR.exists():
+
+    raise FileNotFoundError(
+        "Landmark directory not found:\n"
+        f"{LANDMARK_DIR}"
+    )
+
+if not MODEL_PATH.exists():
+
+    raise FileNotFoundError(
+        "LSTM checkpoint not found:\n"
+        f"{MODEL_PATH}"
+    )
 
 
 # ============================================================
@@ -114,6 +214,7 @@ test_dataset, test_loader = create_dataloader(
     TEST_CSV,
     batch_size=BATCH_SIZE,
     shuffle=False,
+    landmark_dir=LANDMARK_DIR,
 )
 
 print(
@@ -126,12 +227,12 @@ print(
 # ============================================================
 
 model = LSTMClassifier(
-    input_size=150,
-    hidden_size=128,
-    num_layers=2,
-    num_classes=8,
-    dropout=0.3,
-)
+    input_size=INPUT_SIZE,
+    hidden_size=HIDDEN_SIZE,
+    num_layers=NUM_LAYERS,
+    num_classes=NUM_CLASSES,
+    dropout=DROPOUT,
+).to(DEVICE)
 
 
 # ============================================================
@@ -161,8 +262,6 @@ else:
     )
 
 
-model.to(DEVICE)
-
 model.eval()
 
 
@@ -190,8 +289,6 @@ with torch.no_grad():
         # labels
         # lengths
         # padding_mask
-        #
-        # Therefore batch is a tuple, not a dictionary.
         # ----------------------------------------------------
 
         sequences, labels, lengths, padding_mask = batch
@@ -208,10 +305,9 @@ with torch.no_grad():
             DEVICE
         )
 
+
         # ----------------------------------------------------
-        # LSTMClassifier.forward() expects:
-        #
-        # model(x, padding_mask)
+        # LSTM forward pass
         # ----------------------------------------------------
 
         logits = model(
@@ -219,10 +315,16 @@ with torch.no_grad():
             padding_mask
         )
 
+
+        # ----------------------------------------------------
+        # Predictions
+        # ----------------------------------------------------
+
         predictions = torch.argmax(
             logits,
             dim=1
         )
+
 
         all_predictions.extend(
             predictions.cpu().numpy()
@@ -247,6 +349,49 @@ all_predictions = np.array(
 
 
 # ============================================================
+# BASIC VALIDATION
+# ============================================================
+
+if len(all_labels) != len(
+    all_predictions
+):
+
+    raise RuntimeError(
+        "Number of labels and predictions "
+        "do not match."
+    )
+
+
+if len(all_labels) == 0:
+
+    raise RuntimeError(
+        "No predictions were generated."
+    )
+
+
+if np.any(
+    all_labels < 0
+) or np.any(
+    all_labels >= NUM_CLASSES
+):
+
+    raise ValueError(
+        "Invalid ground-truth class ID detected."
+    )
+
+
+if np.any(
+    all_predictions < 0
+) or np.any(
+    all_predictions >= NUM_CLASSES
+):
+
+    raise ValueError(
+        "Invalid predicted class ID detected."
+    )
+
+
+# ============================================================
 # OVERALL METRICS
 # ============================================================
 
@@ -255,13 +400,49 @@ accuracy = accuracy_score(
     all_predictions
 )
 
-precision, recall, f1, _ = (
+
+# ------------------------------------------------------------
+# Macro metrics
+#
+# Explicitly evaluate all 59 classes so that the headline
+# metrics and classification report use the same definition.
+# ------------------------------------------------------------
+
+macro_precision, macro_recall, macro_f1, _ = (
     precision_recall_fscore_support(
         all_labels,
         all_predictions,
+        labels=ALL_CLASS_IDS,
         average="macro",
-        zero_division=0
+        zero_division=0,
     )
+)
+
+
+# ------------------------------------------------------------
+# Weighted metrics
+# ------------------------------------------------------------
+
+weighted_precision, weighted_recall, weighted_f1, _ = (
+    precision_recall_fscore_support(
+        all_labels,
+        all_predictions,
+        average="weighted",
+        zero_division=0,
+    )
+)
+
+
+# ------------------------------------------------------------
+# Class coverage
+# ------------------------------------------------------------
+
+classes_present = np.unique(
+    all_labels
+)
+
+num_classes_present = len(
+    classes_present
 )
 
 
@@ -275,25 +456,58 @@ print("TEST RESULTS")
 print("============================================")
 
 print(
-    f"Accuracy : {accuracy:.4f}"
+    f"Test samples         : {len(test_dataset)}"
 )
 
 print(
-    f"Precision: {precision:.4f}"
+    f"Accuracy             : {accuracy:.4f}"
 )
 
 print(
-    f"Recall   : {recall:.4f}"
+    f"Macro Precision      : {macro_precision:.4f}"
 )
 
 print(
-    f"Macro F1 : {f1:.4f}"
+    f"Macro Recall         : {macro_recall:.4f}"
 )
+
+print(
+    f"Macro F1             : {macro_f1:.4f}"
+)
+
+print(
+    f"Weighted Precision   : {weighted_precision:.4f}"
+)
+
+print(
+    f"Weighted Recall      : {weighted_recall:.4f}"
+)
+
+print(
+    f"Weighted F1          : {weighted_f1:.4f}"
+)
+
+print(
+    f"Classes in test set  : "
+    f"{num_classes_present}/{NUM_CLASSES}"
+)
+
+print("============================================")
 
 
 # ============================================================
-# PER-CLASS RESULTS
+# PER-CLASS CLASSIFICATION REPORT
 # ============================================================
+
+report = classification_report(
+    all_labels,
+    all_predictions,
+    labels=ALL_CLASS_IDS,
+    target_names=CLASS_NAMES,
+    zero_division=0,
+    digits=4,
+)
+
 
 print()
 print("============================================")
@@ -301,14 +515,87 @@ print("PER-CLASS RESULTS")
 print("============================================")
 
 print(
-    classification_report(
-        all_labels,
-        all_predictions,
-        labels=list(range(len(CLASS_NAMES))),
-        target_names=CLASS_NAMES,
-        zero_division=0
-    )
+    report
 )
+
+
+# ============================================================
+# SAVE CLASSIFICATION REPORT
+# ============================================================
+
+RESULTS_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+REPORT_PATH = (
+    RESULTS_DIR
+    / "lstm_classification_report.txt"
+)
+
+
+with open(
+    REPORT_PATH,
+    "w",
+    encoding="utf-8"
+) as file:
+
+    file.write(
+        "ISL LSTM CLASSIFICATION REPORT\n"
+    )
+
+    file.write(
+        "============================================\n\n"
+    )
+
+    file.write(
+        f"Test samples: "
+        f"{len(test_dataset)}\n"
+    )
+
+    file.write(
+        f"Accuracy: "
+        f"{accuracy:.4f}\n"
+    )
+
+    file.write(
+        f"Macro Precision: "
+        f"{macro_precision:.4f}\n"
+    )
+
+    file.write(
+        f"Macro Recall: "
+        f"{macro_recall:.4f}\n"
+    )
+
+    file.write(
+        f"Macro F1: "
+        f"{macro_f1:.4f}\n"
+    )
+
+    file.write(
+        f"Weighted Precision: "
+        f"{weighted_precision:.4f}\n"
+    )
+
+    file.write(
+        f"Weighted Recall: "
+        f"{weighted_recall:.4f}\n"
+    )
+
+    file.write(
+        f"Weighted F1: "
+        f"{weighted_f1:.4f}\n"
+    )
+
+    file.write(
+        f"Classes in test set: "
+        f"{num_classes_present}/{NUM_CLASSES}\n\n"
+    )
+
+    file.write(
+        report
+    )
 
 
 # ============================================================
@@ -318,73 +605,48 @@ print(
 cm = confusion_matrix(
     all_labels,
     all_predictions,
-    labels=list(range(len(CLASS_NAMES)))
+    labels=ALL_CLASS_IDS
 )
 
 
-print(
-    "============================================"
+# ============================================================
+# SAVE CONFUSION MATRIX
+# ============================================================
+
+CM_PATH = (
+    RESULTS_DIR
+    / "lstm_confusion_matrix.csv"
 )
 
-print(
-    "CONFUSION MATRIX"
+
+cm_df = pd.DataFrame(
+    cm,
+    index=CLASS_NAMES,
+    columns=CLASS_NAMES
 )
 
-print(
-    "============================================"
+
+cm_df.to_csv(
+    CM_PATH
 )
 
-print(
-    "Rows = Actual"
-)
-
-print(
-    "Columns = Predicted"
-)
 
 print()
-
+print("============================================")
+print("CONFUSION MATRIX")
+print("============================================")
 
 print(
-    f"{'':>12}",
-    end=""
+    f"Saved to: {CM_PATH}"
 )
-
-for name in CLASS_NAMES:
-
-    print(
-        f"{name:>10}",
-        end=""
-    )
-
-print()
-
-
-for i, row in enumerate(cm):
-
-    print(
-        f"{CLASS_NAMES[i]:>12}",
-        end=""
-    )
-
-    for value in row:
-
-        print(
-            f"{value:>10}",
-            end=""
-        )
-
-    print()
 
 
 # ============================================================
 # INDIVIDUAL PREDICTIONS
 # ============================================================
 
-print()
-print("============================================")
-print("PREDICTIONS")
-print("============================================")
+prediction_rows = []
+
 
 for index, (
     true_label,
@@ -396,18 +658,62 @@ for index, (
     )
 ):
 
-    status = (
-        "CORRECT"
-        if true_label == predicted_label
-        else "WRONG"
+    prediction_rows.append(
+        {
+            "sample_index": index + 1,
+
+            "actual_class_id": int(
+                true_label
+            ),
+
+            "actual_label": CLASS_NAMES[
+                true_label
+            ],
+
+            "predicted_class_id": int(
+                predicted_label
+            ),
+
+            "predicted_label": CLASS_NAMES[
+                predicted_label
+            ],
+
+            "correct": bool(
+                true_label == predicted_label
+            ),
+        }
     )
 
-    print(
-        f"{index + 1:02d}. "
-        f"Actual={CLASS_NAMES[true_label]:<10} "
-        f"Predicted={CLASS_NAMES[predicted_label]:<10} "
-        f"{status}"
-    )
+
+predictions_df = pd.DataFrame(
+    prediction_rows
+)
+
+
+# ============================================================
+# SAVE INDIVIDUAL PREDICTIONS
+# ============================================================
+
+PREDICTIONS_PATH = (
+    RESULTS_DIR
+    / "lstm_predictions.csv"
+)
+
+
+predictions_df.to_csv(
+    PREDICTIONS_PATH,
+    index=False
+)
+
+
+print()
+print("============================================")
+print("PREDICTIONS")
+print("============================================")
+
+print(
+    f"Saved to: {PREDICTIONS_PATH}"
+)
 
 
 # ============================================================
@@ -416,5 +722,23 @@ for index, (
 
 print()
 print("============================================")
-print("Evaluation complete.")
+print("EVALUATION COMPLETE")
+print("============================================")
+
+print(
+    f"Accuracy  : {accuracy:.4f}"
+)
+
+print(
+    f"Precision : {macro_precision:.4f}"
+)
+
+print(
+    f"Recall    : {macro_recall:.4f}"
+)
+
+print(
+    f"Macro F1  : {macro_f1:.4f}"
+)
+
 print("============================================")

@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import torch
 from sklearn.metrics import (
     accuracy_score,
@@ -65,16 +66,11 @@ DEVICE = torch.device(
 # CLASS NAMES
 # ============================================================
 
-CLASS_NAMES = [
-    "loud",
-    "quiet",
-    "happy",
-    "sad",
-    "Beautiful",
-    "Ugly",
-    "Deaf",
-    "Blind",
-]
+CLASS_NAMES = (
+    pd.read_csv(TEST_CSV)
+    .sort_values("class_id")["label"]
+    .tolist()
+)
 
 
 # ============================================================
@@ -114,6 +110,7 @@ test_dataset, test_loader = create_dataloader(
     TEST_CSV,
     batch_size=BATCH_SIZE,
     shuffle=False,
+    landmark_dir=Path(r".\data\processed\landmarks_preprocessed"),
 )
 
 print(
@@ -129,7 +126,7 @@ model = GRUClassifier(
     input_size=150,
     hidden_size=128,
     num_layers=2,
-    num_classes=8,
+    num_classes=59,
     dropout=0.3,
 )
 

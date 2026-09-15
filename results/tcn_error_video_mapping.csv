@@ -1,0 +1,12 @@
+sample_index,actual_class_id,actual_label,predicted_class_id,predicted_label,video_id,video_path
+13,56,97. dry,14,22. loose,MVI_9278,data\processed\landmarks_preprocessed\MVI_9278.npy
+14,40,82. narrow,39,81. wide,MVI_9313,data\processed\landmarks_preprocessed\MVI_9313.npy
+18,44,86. fast,54,95. bad,MVI_9327,data\processed\landmarks_preprocessed\MVI_9327.npy
+35,39,81. wide,40,82. narrow,MVI_5278,data\processed\landmarks_preprocessed\MVI_5278.npy
+37,7,16. cheap,4,13. thick,MVI_9619,data\processed\landmarks_preprocessed\MVI_9619.npy
+53,54,95. bad,53,94. good,MVI_9514,data\processed\landmarks_preprocessed\MVI_9514.npy
+60,5,14. thin,16,24. low,MVI_9609,data\processed\landmarks_preprocessed\MVI_9609.npy
+80,40,82. narrow,39,81. wide,MVI_5200,data\processed\landmarks_preprocessed\MVI_5200.npy
+90,55,96. wet,56,97. dry,MVI_9355,data\processed\landmarks_preprocessed\MVI_9355.npy
+106,54,95. bad,53,94. good,MVI_5320,data\processed\landmarks_preprocessed\MVI_5320.npy
+116,38,80. tall,47,89. warm,MVI_9308,data\processed\landmarks_preprocessed\MVI_9308.npy

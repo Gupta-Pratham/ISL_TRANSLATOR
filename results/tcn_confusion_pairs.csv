@@ -1,0 +1,10 @@
+actual_class_id,actual_label,predicted_class_id,predicted_label,count
+40,82. narrow,39,81. wide,2
+54,95. bad,53,94. good,2
+5,14. thin,16,24. low,1
+38,80. tall,47,89. warm,1
+7,16. cheap,4,13. thick,1
+39,81. wide,40,82. narrow,1
+44,86. fast,54,95. bad,1
+55,96. wet,56,97. dry,1
+56,97. dry,14,22. loose,1

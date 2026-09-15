@@ -40,12 +40,22 @@ data/processed/landmarks_preprocessed/
 data/processed/landmarks_hands_only/
 data/processed/landmarks_pose_only/
 
+# Experimental generated landmark datasets
+data/processed/landmarks_masked/
+data/processed/landmarks_position_velocity/
+
+# Temporary/test landmark outputs
+data/processed/landmarks_clean_test/
+data/processed/landmarks_preprocessed_test/
+data/processed/landmarks_test/
+
 
 # ============================================================
 # Model checkpoints / large model files
 # ============================================================
 
-models/checkpoints/
+# Individual checkpoint files are checked separately
+# before deciding how they should be distributed.
 *.pt
 *.pth
 *.onnx
@@ -74,6 +84,16 @@ logs/
 .DS_Store
 Thumbs.db
 .vscode/
+.idea/
+
+
+# ============================================================
+# Environment / secrets
+# ============================================================
+
+.env
+.env.*
+!.env.example
 
 
 # ============================================================
@@ -82,14 +102,6 @@ Thumbs.db
 
 *.tmp
 *.temp
-
-# ============================================================
-# Temporary/test landmark outputs
-# ============================================================
-
-data/processed/landmarks_clean_test/
-data/processed/landmarks_preprocessed_test/
-data/processed/landmarks_test/
 
 
 # ============================================================

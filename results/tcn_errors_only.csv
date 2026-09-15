@@ -1,0 +1,12 @@
+sample_index,actual_class_id,actual_label,predicted_class_id,predicted_label,correct
+13,56,97. dry,14,22. loose,False
+14,40,82. narrow,39,81. wide,False
+18,44,86. fast,54,95. bad,False
+35,39,81. wide,40,82. narrow,False
+37,7,16. cheap,4,13. thick,False
+53,54,95. bad,53,94. good,False
+60,5,14. thin,16,24. low,False
+80,40,82. narrow,39,81. wide,False
+90,55,96. wet,56,97. dry,False
+106,54,95. bad,53,94. good,False
+116,38,80. tall,47,89. warm,False
